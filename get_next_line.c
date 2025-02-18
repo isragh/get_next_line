@@ -16,27 +16,25 @@
 static char	*ft_read_n_stock(int fd, char *stash)
 {
 	int		char_read;
-	int		i;
-	char	buf[BUFFER_SIZE + 1];
+	char	*buf;
 
-	i = 0;
+	buf = allocate_buffer();
+	if (!buf)
+		return (NULL);
 	char_read = 1;
-	while (char_read != 0)
+	while (char_read > 0)
 	{
 		char_read = read(fd, buf, BUFFER_SIZE);
 		if (char_read == -1)
-		{
-			free(stash);
-			stash = NULL;
-			return (NULL);
-		}
+			return (handle_read_error(buf, stash));
 		buf[char_read] = '\0';
 		stash = ft_strjoin(stash, buf);
-		while (buf[i] != '\0' && buf[i] != '\n')
-			i++;
-		if (buf[i] == '\n')
-			return (stash);
+		if (!stash)
+			return (handle_read_error(buf, NULL));
+		if (ft_strchr(stash, '\n'))
+			break ;
 	}
+	free(buf);
 	return (stash);
 }
 
@@ -73,17 +71,20 @@ static char	*move_pos_stash(char *stash)
 	i = 0;
 	while (stash[i] && stash[i] != '\n')
 		i++;
-	while (!stash[i])
+	if (!stash[i])
 	{
 		free(stash);
 		return (NULL);
 	}
-	str = malloc(sizeof(char) * (ft_strlen(stash) - i + 1));
+	str = malloc(ft_strlen(stash) - i + 1);
 	if (!str)
+	{
+		free(stash);
 		return (NULL);
+	}
 	i++;
 	j = 0;
-	while (i < ft_strlen(stash))
+	while (stash[i])
 		str[j++] = stash[i++];
 	str[j] = '\0';
 	free(stash);
@@ -95,13 +96,11 @@ char	*get_next_line(int fd)
 	static char	*stash;
 	char		*line;
 
-	if (fd < 0 || read(fd, 0, 0) < 0 || BUFFER_SIZE <= 0)
-	{
-		free(stash);
-		stash = NULL;
+	if (fd < 0 || BUFFER_SIZE <= 0)
 		return (NULL);
-	}
 	stash = ft_read_n_stock(fd, stash);
+	if (!stash)
+		return (NULL);
 	line = search_endline(stash);
 	stash = move_pos_stash(stash);
 	return (line);
